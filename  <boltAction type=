@@ -1,0 +1,83 @@
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { loginSchema, LoginInput } from '@fullstack/shared';
+import { FormField, Button } from '../components/Form';
+import { useMutation } from '@tanstack/react-query';
+import api from '../lib/api';
+import { useAuth } from '../lib/auth';
+import { useNavigate } from 'react-router-dom';
+
+export const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { setAuth } = useAuth();
+  
+  const {
+    register,
+    handleSubmit,
+    formState: { errors }
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema)
+  });
+
+  const loginMutation = useMutation({
+    mutationFn: async (data: LoginInput) => {
+      const response = await api.post('/auth/login', data);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      setAuth(data.user, data.token);
+      navigate('/');
+    }
+  });
+
+  const onSubmit = (data: LoginInput) => {
+    loginMutation.mutate(data);
+  };
+
+  return (
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
+        <div>
+          <h2 className="text-center text-3xl font-extrabold text-gray-900">
+            Sign in to your account
+          </h2>
+        </div>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          <div className="space-y-4">
+            <FormField
+              label="Email"
+              name="email"
+              type="email"
+              register={register}
+              error={errors.email?.message}
+              required
+            />
+            <FormField
+              label="Password"
+              name="password"
+              type="password"
+              register={register}
+              error={errors.password?.message}
+              required
+            />
+          </div>
+
+          {loginMutation.error && (
+            <div className="text-red-500 text-sm text-center">
+              {loginMutation.error.message}
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            className="w-full"
+            isLoading={loginMutation.isPending}
+          >
+            Sign in
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+};
